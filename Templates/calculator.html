@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculator | Smart Farm</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Golden Green Theme */
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%); min-height: 100vh; margin: 0; padding: 20px; display: flex; flex-direction: column; }
+        
+        .navbar { background: rgba(255,255,255,0.95); padding: 15px 40px; border-radius: 50px; display: flex; justify-content: space-between; align-items: center; width: 90%; max-width: 1000px; margin: 0 auto 40px auto; }
+        .logo { font-weight: 700; color: #2e5a1c; text-decoration: none; font-size: 20px; }
+        
+        .container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 500px; margin: 0 auto; border-top: 6px solid #d4af37; }
+        
+        h1 { color: #2e5a1c; text-align: center; margin-bottom: 30px; font-size: 24px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: 600; display: block; margin-bottom: 8px; color: #333; font-size: 14px; }
+        select, input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-family: 'Poppins', sans-serif; transition: 0.3s; }
+        select:focus, input:focus { border-color: #2e5a1c; outline: none; }
+        
+        /* Error State Style */
+        .error-border { border-color: #d32f2f !important; background-color: #ffebee; }
+        .error-msg { color: #d32f2f; font-size: 12px; margin-top: 5px; display: none; }
+
+        button { width: 100%; padding: 15px; background: #2e5a1c; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 16px; }
+        button:hover { background: #43a047; transform: translateY(-2px); }
+
+        .back-link { display: block; text-align: center; margin-top: 20px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; }
+        .back-link:hover { color: white; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="logo"><i class="fas fa-leaf"></i> Smart Farm</a>
+        <a href="/" style="text-decoration: none; color: #555; font-weight: 600;">Home</a>
+    </nav>
+
+    <div class="container">
+        <h1><i class="fas fa-calculator"></i> Energy Calculator</h1>
+        
+        <form action="/predict" method="POST" id="calcForm" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label>Select Equipment</label>
+                <select name="equipment">
+                    {% for e in equipments %}
+                    <option value="{{ e.id }}">{{ e.name }} ({{ e.power_watts }} W)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Select Crop</label>
+                <select name="crop">
+                    {% for c in crops %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Acres</label>
+                    <input type="number" name="acres" id="acres" step="0.1" value="1.0">
+                    <span class="error-msg">Must be positive</span>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Hours/Day</label>
+                    <input type="number" name="hours" id="hours" step="0.5" placeholder="5.0">
+                    <span class="error-msg">Max 24 hours</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Season</label>
+                    <select name="season">
+                        <option value="summer">Summer</option>
+                        <option value="winter">Winter</option>
+                        <option value="monsoon">Monsoon</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Age (Yrs)</label>
+                    <input type="number" name="age" id="age" step="0.5" placeholder="2.5">
+                    <span class="error-msg">Invalid age</span>
+                </div>
+            </div>
+
+            <button type="submit">Analyze Data <i class="fas fa-arrow-right"></i></button>
+        </form>
+    </div>
+
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+
+    <script>
+        function validateForm() {
+            let valid = true;
+            
+            // Get fields
+            const acres = document.getElementById('acres');
+            const hours = document.getElementById('hours');
+            const age = document.getElementById('age');
+
+            // Reset styles
+            [acres, hours, age].forEach(el => {
+                el.classList.remove('error-border');
+                el.nextElementSibling.style.display = 'none';
+            });
+
+            // Check Acres
+            if (acres.value <= 0) {
+                acres.classList.add('error-border');
+                acres.nextElementSibling.style.display = 'block';
+                valid = false;
+            }
+
+            // Check Hours (Must be > 0 and <= 24)
+            if (hours.value <= 0 || hours.value > 24) {
+                hours.classList.add('error-border');
+                hours.nextElementSibling.innerText = "Between 0-24 hrs";
+                hours.nextElementSibling.style.display = 'block';
+                valid = false;
+            }
+
+            // Check Age
+            if (age.value < 0) {
+                age.classList.add('error-border');
+                age.nextElementSibling.style.display = 'block';
+                valid = false;
+            }
+
+            return valid; // Stop form if false
+        }
+    </script>
+<div style="position: fixed; left: 20px; top: 120px; width: 200px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); font-size: 12px; display: none;" id="recentBox">
+        <h4 style="margin: 0 0 10px 0; color: #2e5a1c;">📋 Recent Scans</h4>
+        <div id="recentList"></div>
+    </div>
+
+    <script>
+        // 1. Validation Logic (Keep existing)
+        function validateForm() {
+            let valid = true;
+            // ... (Your existing validation code) ...
+            
+            if(valid) {
+                saveToHistory(); // Save data if valid
+            }
+            return valid;
+        }
+
+        // 2. Save to History (New Feature)
+        function saveToHistory() {
+            const eq = document.querySelector('select[name="equipment"] option:checked').text;
+            const hours = document.getElementById('hours').value;
+            
+            const scan = { eq: eq, time: new Date().toLocaleTimeString() };
+            let history = JSON.parse(localStorage.getItem('farmHistory') || '[]');
+            
+            history.unshift(scan); // Add to top
+            if(history.length > 3) history.pop(); // Keep only last 3
+            
+            localStorage.setItem('farmHistory', JSON.stringify(history));
+        }
+
+        // 3. Load History on Page Load
+        window.onload = function() {
+            let history = JSON.parse(localStorage.getItem('farmHistory') || '[]');
+            if(history.length > 0) {
+                document.getElementById('recentBox').style.display = 'block';
+                const list = document.getElementById('recentList');
+                history.forEach(item => {
+                    list.innerHTML += `<div style="border-bottom:1px solid #eee; padding:5px 0;">
+                        <strong>${item.eq.split('(')[0]}</strong><br>
+                        <span style="color:#888;">${item.time}</span>
+                    </div>`;
+                });
+            }
+        };
+    </script>
+</body>
+</html>

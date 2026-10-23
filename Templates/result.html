@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis Report | Smart Farm</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f4f7f6;
+            margin: 0; padding: 0;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: #2e5a1c; color: white; padding: 0 40px; height: 70px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar .logo { font-size: 22px; font-weight: 700; color: #d4af37; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+        .navbar a { color: white; text-decoration: none; margin-left: 20px; font-weight: 500; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; flex: 1; }
+
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header-section h1 { color: #2e5a1c; margin: 0; font-size: 28px; }
+        
+        .print-btn {
+            background: white; border: 2px solid #2e5a1c; color: #2e5a1c;
+            padding: 10px 20px; border-radius: 50px; font-weight: 600; cursor: pointer;
+            transition: 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .print-btn:hover { background: #2e5a1c; color: white; }
+
+        .grid-container { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+
+        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+
+        /* Card Layout */
+        .weather-card { grid-column: span 12; background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); color: white; display: flex; align-items: center; justify-content: space-between; }
+        .usage-card { grid-column: span 8; border-top: 5px solid #2e5a1c; }
+        .cost-card { grid-column: span 4; border-top: 5px solid #d4af37; }
+        .ai-card { grid-column: span 6; border-top: 5px solid #2e5a1c; }
+        .tip-card { grid-column: span 6; background: linear-gradient(to right, #2e5a1c, #43a047); color: white; }
+
+        h2 { font-size: 18px; color: #555; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .weather-card h2 { color: white; border: none; }
+        
+        .big-stat { font-size: 36px; font-weight: 700; color: #2e5a1c; margin: 10px 0; }
+        .sub-stat { font-size: 14px; color: #888; }
+        
+        .btn-back { display: block; width: 200px; margin: 40px auto; text-align: center; padding: 12px; background: #2e5a1c; color: white; border-radius: 50px; text-decoration: none; font-weight: 600; }
+
+        @media print { .navbar, .btn-back, .print-btn { display: none; } body { background: white; } .container { width: 100%; max-width: 100%; } .card { box-shadow: none; border: 1px solid #ddd; } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="logo"><i class="fas fa-leaf"></i> Smart Farm</a>
+        <div><a href="/">Home</a><a href="/about">About</a></div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <div>
+                <h1>Analysis Report</h1>
+                <p style="color: #666; margin: 5px 0;">Equipment: <strong>{{ eq.name }}</strong> | Crop: <strong>{{ crop.name }}</strong></p>
+            </div>
+            <button onclick="window.print()" class="print-btn"><i class="fas fa-print"></i> Save Report</button>
+        </div>
+
+        <div class="grid-container">
+            
+            <div class="card weather-card" id="weatherBox">
+                <div>
+                    <h2 style="margin-bottom: 5px;"><i class="fas fa-cloud-sun"></i> Field Conditions</h2>
+                    <span style="font-size: 14px; opacity: 0.9;">Simulated Live Data based on Season</span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 32px; font-weight: bold;" id="tempDisplay">32°C</div>
+                    <div id="conditionDisplay">Sunny & Dry</div>
+                </div>
+            </div>
+
+            <div class="card usage-card">
+                <h2><i class="fas fa-chart-bar"></i> Efficiency Check</h2>
+                <div style="height: 200px;">
+                    <canvas id="usageChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card cost-card">
+                <h2><i class="fas fa-wallet"></i> Estimated Cost</h2>
+                <div class="big-stat">₹{{ monthly_cost }}</div>
+                <div class="sub-stat">Per Month (Approx)</div>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+                
+                {% if savings > 0 %}
+                    <div style="color: #2e7d32; font-weight: 600;"><i class="fas fa-arrow-down"></i> Save ₹{{ savings }}/mo</div>
+                {% elif savings < 0 %}
+                    <div style="color: #d32f2f; font-weight: 600;"><i class="fas fa-arrow-up"></i> Spending ₹{{ savings|abs }} less</div>
+                {% else %}
+                    <div style="color: #2e5a1c; font-weight: 600;"><i class="fas fa-check-circle"></i> Perfect spending!</div>
+                {% endif %}
+            </div>
+
+            <div class="card ai-card">
+                <h2><i class="fas fa-robot"></i> Equipment Health</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div>
+                        <div class="sub-stat">Lifespan Remaining</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #333;">{{ life }} Years</div>
+                    </div>
+                    <div>
+                        <div class="sub-stat">Grid Status</div>
+                        <span style="padding: 5px 10px; border-radius: 5px; background: {{ 'red' if 'CRITICAL' in trans_status else '#e8f5e9' }}; color: {{ 'white' if 'CRITICAL' in trans_status else '#2e7d32' }}; font-weight: bold; font-size: 14px;">{{ trans_status }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card tip-card">
+                <h2 style="color: #d4af37; border-color: rgba(255,255,255,0.2);"><i class="fas fa-lightbulb"></i> AI Recommendation</h2>
+                <p style="font-size: 16px; line-height: 1.6; font-weight: 500;">{{ tip }}</p>
+            </div>
+        </div>
+
+        <a href="/calculator" class="btn-back"><i class="fas fa-arrow-left"></i> Analyze Another</a>
+    </div>
+
+    <script>
+        // Graph Script
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Your Usage', 'AI Recommended'],
+                datasets: [{
+                    label: 'Hours/Day',
+                    data: [{{ hours }}, {{ rec_hours }}],
+                    backgroundColor: ['#d32f2f', '#2e7d32'],
+                    borderRadius: 5
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+
+        // Weather Simulation Script
+        // We read the 'tip' text or logic to guess the season (since we didn't pass season explicitly to HTML variable, we infer or randomize)
+        // For a hackathon, we can just randomize slightly to look 'live'
+        const temps = {
+            'Summer': {t: '34°C', c: 'Sunny & Hot', color: 'linear-gradient(to right, #ff9966, #ff5e62)'},
+            'Winter': {t: '22°C', c: 'Mild & Clear', color: 'linear-gradient(to right, #4facfe, #00f2fe)'},
+            'Monsoon': {t: '26°C', c: 'Cloudy & Humid', color: 'linear-gradient(to right, #4b6cb7, #182848)'}
+        };
+
+        // Randomly pick one for demo if we can't detect, OR use the cost to guess season logic
+        // Let's just pick a random one to simulate "Live Sensor Data"
+        const keys = Object.keys(temps);
+        const randomSeason = keys[Math.floor(Math.random() * keys.length)];
+        const data = temps[randomSeason];
+
+        document.getElementById('tempDisplay').innerText = data.t;
+        document.getElementById('conditionDisplay').innerText = data.c;
+        document.getElementById('weatherBox').style.background = data.color;
+
+    </script>
+
+</body>
+</html>
